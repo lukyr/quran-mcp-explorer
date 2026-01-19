@@ -2,7 +2,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { quranService } from "./quranService";
 
-// Initialize AI helper
 const createAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const searchVerseTool = {
@@ -47,7 +46,6 @@ export const geminiService = {
   async chat(message: string, history: any[] = []): Promise<{ text: string, toolCalls?: any[] }> {
     const ai = createAI();
     
-    // Build contents without mutating the original history array
     const contents = history.length > 0 
       ? [...history, { role: 'user', parts: [{ text: message }] }]
       : [{ role: 'user', parts: [{ text: message }] }];
@@ -56,15 +54,16 @@ export const geminiService = {
       model: 'gemini-3-pro-preview',
       contents: contents,
       config: {
-        systemInstruction: `Anda adalah Quran MCP Assistant. Tugas Anda adalah membantu pengguna mengeksplorasi Al-Quran menggunakan data terverifikasi dari Quran.com API.
+        systemInstruction: `Anda adalah Quran MCP Assistant. Bantu pengguna mengeksplorasi Al-Quran dengan data terverifikasi.
         
-        ATURAN UTAMA:
-        1. Gunakan Bahasa Indonesia sepenuhnya.
-        2. Jangan pernah berhalusinasi. Jika alat (tools) tidak mengembalikan data, katakan bahwa data tidak ditemukan.
-        3. Setiap kali menyebutkan ayat, sertakan teks Arab (uthmani) dan terjemahan resmi yang didapat dari alat.
-        4. Berikan tautan Quran.com/id untuk setiap ayat: https://quran.com/id/[surah]:[ayah]?translations=33
-        5. Tampilkan hasil pencarian dalam bentuk list yang rapi jika ada banyak hasil.
-        6. Fokus pada keakuratan nomor ayat dan surat.`,
+        PENTING: JANGAN PERNAH memberikan tag HTML seperti <p style="..."> atau <div>.
+        Format jawaban Anda harus bersih menggunakan Markdown standar:
+        1. Teks Arab: Tuliskan apa adanya (Uthmani). Jangan beri tanda kutip atau tag.
+        2. Terjemahan: Gunakan format "**Terjemahan:** [Isi Terjemahan]"
+        3. Gunakan garis pemisah "---" di antara ayat yang berbeda agar tampilan rapi (clean).
+        4. Setiap ayat wajib memiliki link: https://quran.com/id/[surah]:[ayah]?translations=33
+        5. Gunakan Bahasa Indonesia sepenuhnya.
+        6. Jika tidak ada hasil, katakan dengan sopan.`,
         tools: [{ 
           functionDeclarations: [
             searchVerseTool, 
@@ -86,8 +85,7 @@ export const geminiService = {
       switch (name) {
         case 'search_verse':
           const searchData = await quranService.searchVerses(args.query, args.language || 'id');
-          // If no results, return a clear message to the model
-          if (!searchData || searchData.length === 0) return { message: "Tidak ada ayat yang ditemukan untuk kata kunci ini." };
+          if (!searchData || searchData.length === 0) return { message: "Tidak ada ayat yang ditemukan." };
           return searchData;
         case 'get_ayah_details':
           return await quranService.getAyahDetails(args.surah_number, args.ayah_number);
