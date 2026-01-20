@@ -230,7 +230,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
                 <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
               </div>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Berpikir...</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Mencari rujukan di Quran.com...</span>
             </div>
           </div>
         )}
