@@ -84,6 +84,36 @@ export const geminiService = {
     };
   },
 
+  async generateVerseImage(theme: string): Promise<string> {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [{
+          text: `Create a professional and serene wallpaper background with a theme of: ${theme}. 
+
+          STRICT GUIDELINES:
+          1. CONTENT: Must be strictly beautiful, peaceful, and inspiring. Focus on serene landscapes, morning dew, calm oceans, starry skies, or elegant abstract Islamic geometric patterns (arabesque).
+          2. SAFETY: Strictly NO pornography, NO nudity, NO violence, NO cruelty, NO blood, NO weapons, and NO disturbing imagery. The output must be family-friendly and spiritually uplifting.
+          3. COMPOSITION: NO text in the image. NO human faces or clear human figures. 
+          4. STYLE: High-quality minimalist digital art, cinematic lighting, soft atmospheric glow. Colors: Elegant tones like deep emerald green, royal gold, soft sapphire blue, or warm dawn colors.
+          5. RESOLUTION: Aesthetic, high-definition 2k style finish.`
+        }]
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1"
+        }
+      }
+    });
+
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        return `data:image/png;base64,${part.inlineData.data}`;
+      }
+    }
+    throw new Error("Gagal menghasilkan gambar");
+  },
+
   async executeTool(name: string, args: any): Promise<any> {
     try {
       switch (name) {
