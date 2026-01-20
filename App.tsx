@@ -21,25 +21,27 @@ const App: React.FC = () => {
 
   return (
     <Layout>
-      {/* Main Content Area with Fixed Height for Sync */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch h-[750px] max-h-[85vh]">
+      {/* Container utama yang adaptif: Stack di mobile, Grid di desktop */}
+      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6 items-stretch lg:h-[750px] lg:max-h-[85vh] h-[calc(100vh-140px)]">
         
-        {/* Left Column: Index Surah - h-full ensures it matches Chat height */}
-        <div className="lg:col-span-4 h-full flex flex-col min-h-0">
+        {/* Kolom Kiri: Indeks Surah - Sembunyikan di mobile (hidden), muncul di desktop (lg:flex) */}
+        <div className="hidden lg:flex lg:col-span-4 h-full flex-col min-h-0">
           <SurahBrowser onReadSurah={openModal} />
         </div>
 
-        {/* Right Column: Chat Interface - flex flex-col min-h-0 for proper internal overflow */}
-        <div className="lg:col-span-8 h-full flex flex-col min-h-0">
+        {/* Kolom Kanan: Interface Chat - Full width di mobile */}
+        <div className="flex-1 lg:col-span-8 h-full flex-col min-h-0 flex">
           <ChatWindow onLinkClick={openModal} />
           
-          <div className="mt-4 px-4 py-2.5 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-700/60 uppercase tracking-widest">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-              Pencarian Semantik Aktif
+          {/* Status Bar - Sembunyikan di mobile untuk menghemat ruang, atau perkecil */}
+          <div className="mt-2 lg:mt-4 px-4 py-2 bg-emerald-50/50 rounded-xl lg:rounded-2xl border border-emerald-100/50 flex items-center justify-between shadow-sm">
+            <div className="flex items-center gap-2 text-[9px] lg:text-[10px] font-bold text-emerald-700/60 uppercase tracking-widest">
+              <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+              <span className="hidden xs:inline">Pencarian Semantik Aktif</span>
+              <span className="xs:hidden">Aktif</span>
             </div>
-            <p className="text-[10px] text-gray-400 font-medium italic">
-              Terintegrasi dengan Quran.com & Gemini AI
+            <p className="text-[9px] lg:text-[10px] text-gray-400 font-medium italic">
+              Quran.com & Gemini AI
             </p>
           </div>
         </div>
