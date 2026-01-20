@@ -1,5 +1,10 @@
 {
   "name": "Sahabat Quran",
-  "description": "Jelajahi keindahan Al-Quran dengan panduan cerdas. Temukan ayat, makna, dan inspirasi harian melalui antarmuka yang modern dan mudah digunakan.",
+  "short_name": "SahabatQuran",
+  "description": "Sahabat Quran adalah aplikasi cerdas untuk mencari ayat Al-Quran, terjemahan, dan inspirasi harian menggunakan teknologi AI.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#059669",
   "requestFramePermissions": []
 }

@@ -4,7 +4,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sahabat Quran</title>
+  
+  <!-- Primary Meta Tags -->
+  <title>Sahabat Quran - Jelajahi & Cari Ayat Al-Quran dengan AI</title>
+  <meta name="title" content="Sahabat Quran - Jelajahi & Cari Ayat Al-Quran dengan AI">
+  <meta name="description" content="Sahabat Quran adalah aplikasi cerdas untuk mencari ayat Al-Quran, terjemahan, dan inspirasi harian menggunakan teknologi AI. Temukan makna Al-Quran lebih dalam dan mudah.">
+  <meta name="keywords" content="Al-Quran online, cari ayat quran, tafsir quran, sahabat quran, AI quran, terjemahan indonesia, aplikasi islam">
+  <meta name="author" content="Sahabat Quran Team">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://sahabatquran.com/">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://sahabatquran.com/">
+  <meta property="og:title" content="Sahabat Quran - Jelajahi & Cari Ayat Al-Quran dengan AI">
+  <meta property="og:description" content="Aplikasi cerdas untuk mengeksplorasi Al-Quran dengan bantuan AI. Temukan rujukan ayat dan makna dengan cepat dan akurat.">
+  <meta property="og:image" content="https://sahabatquran.com/og-image.jpg">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://sahabatquran.com/">
+  <meta property="twitter:title" content="Sahabat Quran - Jelajahi & Cari Ayat Al-Quran dengan AI">
+  <meta property="twitter:description" content="Aplikasi cerdas untuk mengeksplorasi Al-Quran dengan bantuan AI.">
+  <meta property="twitter:image" content="https://sahabatquran.com/og-image.jpg">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/favicon.png">
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Sahabat Quran",
+      "url": "https://sahabatquran.com/",
+      "description": "Aplikasi cerdas untuk mencari ayat Al-Quran dan terjemahan menggunakan teknologi AI.",
+      "applicationCategory": "EducationalApplication",
+      "operatingSystem": "All",
+      "author": {
+        "@type": "Organization",
+        "name": "Sahabat Quran Project"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "IDR"
+      }
+    }
+  </script>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,7 +67,6 @@
       color: #1a1a1a;
       background-color: #fafafa;
     }
-    /* Elegant Arabic Script similar to Quran.com */
     .font-arabic {
       font-family: 'Amiri', 'Scheherazade New', serif;
       line-height: 2.4;
@@ -30,11 +77,9 @@
       background-image: radial-gradient(#e5e7eb 0.5px, transparent 0.5px);
       background-size: 24px 24px;
     }
-    /* Smooth Transitions */
     .transition-smooth {
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    /* Custom Scrollbar */
     ::-webkit-scrollbar {
       width: 5px;
     }
@@ -48,11 +93,6 @@
     ::-webkit-scrollbar-thumb:hover {
       background: #94a3b8;
     }
-    /* Typographic Overrides */
-    h1, h2, h3, h4 {
-      letter-spacing: -0.01em;
-    }
-    /* Study Mode Dividers */
     .ayah-divider {
       display: flex;
       align-items: center;
@@ -85,8 +125,8 @@
 </script>
 </head>
 <body class="islamic-bg">
+  <h1 class="sr-only">Sahabat Quran - Cari dan Pelajari Al-Quran dengan Kecerdasan Buatan (AI)</h1>
   <div id="root"></div>
-  <!-- Entry point untuk aplikasi Vite/React -->
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>

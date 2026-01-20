@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { geminiService } from '../services/geminiService';
+import { analyticsService } from '../services/analyticsService';
 import { ChatMessage } from '../types';
 
 interface ChatWindowProps {
@@ -28,6 +29,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
   }, [messages, isLoading]);
 
   const handleClear = () => {
+    analyticsService.logEvent('clear_chat');
     lastClearTimestamp.current = Date.now();
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -43,6 +45,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
 
     const requestTime = Date.now();
     const userMessage = input.trim();
+    
+    // Tracking GA4
+    analyticsService.trackAIChat(userMessage);
+
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -117,6 +123,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
     }
   };
 
+  const handleLinkClick = (url: string) => {
+    analyticsService.trackViewSurah(url);
+    onLinkClick(url);
+  };
+
   const renderMessageContent = (content: string) => {
     if (!content) return null;
     const cleaned = content.replace(/<[^>]*>?/gm, '');
@@ -155,7 +166,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
           return (
             <div key={i} className="my-2">
               <button 
-                onClick={() => onLinkClick(urlMatch)}
+                onClick={() => handleLinkClick(urlMatch)}
                 className="inline-flex items-center gap-1.5 px-3 py-1 lg:px-4 lg:py-1.5 bg-emerald-50 text-emerald-700 rounded-full hover:bg-emerald-600 hover:text-white transition-smooth border border-emerald-100 font-bold text-[10px] lg:text-xs shadow-sm"
               >
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z"/></svg>
@@ -189,7 +200,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
 
   return (
     <div className="bg-white lg:rounded-[2.5rem] shadow-none lg:shadow-2xl flex flex-col flex-1 h-full min-h-0 lg:border border-slate-100 overflow-hidden">
-      {/* Header Chat */}
       <div className="bg-white px-4 lg:px-8 py-3 lg:py-5 border-b border-slate-50 flex items-center justify-between shadow-sm z-10">
         <div className="flex items-center gap-3 lg:gap-4">
           <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl lg:rounded-2xl bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-100">
@@ -217,7 +227,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         </button>
       </div>
 
-      {/* Area Chat */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 lg:p-10 space-y-6 lg:space-y-10 custom-scrollbar bg-[#fcfdfd]">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
@@ -254,7 +263,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         )}
       </div>
 
-      {/* Input Form */}
       <form onSubmit={handleSubmit} className="p-4 lg:p-8 bg-white border-t border-slate-100">
         <div className="relative flex items-center max-w-4xl mx-auto gap-2 lg:gap-4">
           <input

@@ -1,15 +1,21 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { ChatWindow } from './components/ChatWindow';
 import { SurahBrowser } from './components/SurahBrowser';
 import { Modal } from './components/Modal';
+import { analyticsService } from './services/analyticsService';
 
 const App: React.FC = () => {
   const [modalState, setModalState] = useState<{ isOpen: boolean; url: string }>({
     isOpen: false,
     url: '',
   });
+
+  useEffect(() => {
+    // Inisialisasi Google Analytics dari Env
+    analyticsService.init();
+  }, []);
 
   const openModal = (url: string) => {
     setModalState({ isOpen: true, url });
@@ -21,7 +27,6 @@ const App: React.FC = () => {
 
   return (
     <Layout>
-      {/* h-screen di mobile untuk full screen chat experience, lg:h-[750px] di desktop */}
       <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6 items-stretch lg:h-[750px] lg:max-h-[85vh] h-screen">
         
         {/* Kolom Kiri: Indeks Surah - Sembunyikan di mobile */}

@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { quranService } from '../services/quranService';
+import { analyticsService } from '../services/analyticsService';
 import { Surah } from '../types';
 
 interface SurahBrowserProps {
@@ -18,6 +19,17 @@ export const SurahBrowser: React.FC<SurahBrowserProps> = ({ onReadSurah }) => {
       setLoading(false);
     });
   }, []);
+
+  const handleFilterChange = (val: string) => {
+    setFilter(val);
+    analyticsService.trackSurahSearch(val);
+  };
+
+  const handleSurahClick = (surah: Surah) => {
+    const url = `https://quran.com/id/${surah.id}?translations=33`;
+    analyticsService.trackViewSurah(url);
+    onReadSurah(url);
+  };
 
   const filtered = surahs.filter(s => 
     s.name_simple.toLowerCase().includes(filter.toLowerCase()) ||
@@ -39,7 +51,7 @@ export const SurahBrowser: React.FC<SurahBrowserProps> = ({ onReadSurah }) => {
           <input
             type="text"
             value={filter}
-            onChange={(e) => setFilter(e.target.value)}
+            onChange={(e) => handleFilterChange(e.target.value)}
             placeholder="Cari surah..."
             className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-3xl text-sm font-semibold focus:outline-none focus:bg-white focus:border-emerald-500/20 transition-smooth shadow-inner"
           />
@@ -61,7 +73,7 @@ export const SurahBrowser: React.FC<SurahBrowserProps> = ({ onReadSurah }) => {
             {filtered.map(surah => (
               <div
                 key={surah.id}
-                onClick={() => onReadSurah(`https://quran.com/id/${surah.id}?translations=33`)}
+                onClick={() => handleSurahClick(surah)}
                 className="group relative flex items-center justify-between p-4 rounded-3xl hover:bg-emerald-50/40 cursor-pointer transition-smooth"
               >
                 <div className="flex items-center gap-4">
