@@ -10,14 +10,13 @@ interface ChatWindowProps {
 export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
   const initialMessage = useMemo<ChatMessage>(() => ({ 
     role: 'model', 
-    content: 'Assalamu’alaikum Warahmatullahi Wabarakatuh. Selamat datang di **Sahabat Quran**.\n\nSaya adalah teman virtual Anda untuk menjelajahi keindahan firman Allah. Saya siap membantu Anda mencari ayat berdasarkan topik, memahami makna, atau sekadar berbagi inspirasi dari Al-Quran.\n\nApa yang ingin Anda pelajari hari ini?\n\n*Contoh: "Ayat tentang ketenangan hati", "Kisah Nabi Musa di Al-Quran", atau "Tampilkan Surah Al-Fatihah"*' 
+    content: 'Assalamu’alaikum Warahmatullahi Wabarakatuh. Selamat datang di **Sahabat Quran**.\n\nSaya adalah teman virtual Anda untuk menjelajahi keindahan firman Allah. Apa yang ingin Anda pelajari hari ini?\n\n*Contoh: "Ayat tentang ketenangan hati", "Kisah Nabi Musa", atau "Tampilkan Surah Al-Fatihah"*' 
   }), []);
 
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  // Refs to handle race conditions during "Clear"
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastClearTimestamp = useRef<number>(Date.now());
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -29,15 +28,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
   }, [messages, isLoading]);
 
   const handleClear = () => {
-    // 1. Mark the timestamp of the clear
     lastClearTimestamp.current = Date.now();
-    
-    // 2. Abort any ongoing network request if possible
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-
-    // 3. Reset all UI states
     setMessages([initialMessage]);
     setInput('');
     setIsLoading(false);
@@ -49,8 +43,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
 
     const requestTime = Date.now();
     const userMessage = input.trim();
-    
-    // Create new abort controller for this specific request
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -59,7 +51,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
     setIsLoading(true);
 
     try {
-      // Prepare history (excluding initial greeting)
       const apiHistory = messages
         .filter((m, idx) => !(idx === 0 && m.role === 'model'))
         .map(m => ({
@@ -69,7 +60,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
 
       const response = await geminiService.chat(userMessage, apiHistory);
       
-      // CRITICAL: Check if "Clear" was clicked while we were waiting
       if (requestTime < lastClearTimestamp.current) return;
 
       if (response.toolCalls && response.toolCalls.length > 0) {
@@ -80,7 +70,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
           })
         );
 
-        // Check again after tools execute
         if (requestTime < lastClearTimestamp.current) return;
 
         const toolHistory = [
@@ -104,18 +93,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
 
         setMessages(prev => [...prev, { 
           role: 'model', 
-          content: finalResponse.text || "Hasil telah diproses. Lihat referensi di bawah.",
+          content: finalResponse.text || "Hasil telah diproses.",
           toolResults
         }]);
       } else {
         setMessages(prev => [...prev, { role: 'model', content: response.text }]);
       }
-    } catch (error) {
-      // Ignore errors if the request was aborted manually by "Clear"
+    } catch (error: any) {
       if (requestTime < lastClearTimestamp.current) return;
       
       console.error(error);
-      setMessages(prev => [...prev, { role: 'model', content: "Maaf, Sahabat Quran sedang mengalami sedikit kendala. Coba cek koneksi Anda ya." }]);
+      let errorMsg = "Maaf, Sahabat Quran sedang mengalami sedikit kendala. Coba cek koneksi Anda ya.";
+      
+      if (error?.message?.includes('429')) {
+        errorMsg = "Mohon maaf, kuota harian Sahabat Quran saat ini sudah habis (Error 429). Silakan coba lagi beberapa saat lagi atau besok ya. Terima kasih atas pengertiannya.";
+      }
+
+      setMessages(prev => [...prev, { role: 'model', content: errorMsg }]);
     } finally {
       if (requestTime >= lastClearTimestamp.current) {
         setIsLoading(false);
@@ -198,7 +192,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         <button 
           onClick={handleClear}
           className="text-slate-300 hover:text-red-500 transition-smooth p-2.5 hover:bg-red-50 rounded-2xl group"
-          title="Hapus Semua Percakapan"
+          title="Hapus Percakapan"
         >
           <svg className="w-5 h-5 transform group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -236,7 +230,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
                 <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
               </div>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sahabat Quran sedang mengetik...</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Berpikir...</span>
             </div>
           </div>
         )}
@@ -248,7 +242,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ketik pesan Anda di sini..."
+            placeholder="Tanyakan sesuatu tentang Al-Quran..."
             className="w-full bg-slate-50 border-2 border-slate-50 rounded-[2rem] py-5 px-10 pr-20 text-[16px] text-slate-900 placeholder-slate-400 font-semibold focus:outline-none focus:bg-white focus:border-emerald-500/20 transition-smooth shadow-inner"
           />
           <button
