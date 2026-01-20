@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { geminiService } from '../services/geminiService';
 import { ChatMessage } from '../types';
 
@@ -8,10 +8,10 @@ interface ChatWindowProps {
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
-  const initialMessage: ChatMessage = { 
+  const initialMessage = useMemo<ChatMessage>(() => ({ 
     role: 'model', 
-    content: 'Assalamu’alaikum Warahmatullahi Wabarakatuh. Selamat datang di **Quran MCP Explorer**.\n\nSaya adalah asisten virtual cerdas Anda yang terhubung langsung dengan sumber terverifikasi Quran.com. Saya siap membantu Anda mengeksplorasi kedalaman makna, mencari ayat berdasarkan topik, atau memberikan referensi teks Arab yang akurat.\n\nApa yang ingin Anda pelajari atau cari dari Al-Quran hari ini?\n\n*Contoh: "Ayat tentang memaafkan", "Tafsir Surah Al-Kahfi", atau "Tampilkan Al-Baqarah 255"*' 
-  };
+    content: 'Assalamu’alaikum Warahmatullahi Wabarakatuh. Selamat datang di **Quran Explorer**.\n\nSaya adalah **Sahabat Quran**, teman virtual Anda untuk menjelajahi keindahan firman Allah. Saya siap membantu Anda mencari ayat berdasarkan topik, memahami makna, atau sekadar berbagi inspirasi dari Al-Quran.\n\nApa yang ingin Anda pelajari hari ini?\n\n*Contoh: "Ayat tentang ketenangan hati", "Kisah Nabi Musa di Al-Quran", atau "Tampilkan Surah Al-Fatihah"*' 
+  }), []);
 
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const [input, setInput] = useState('');
@@ -25,8 +25,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
   }, [messages, isLoading]);
 
   const handleClear = () => {
-    if (window.confirm('Bersihkan riwayat percakapan?')) {
+    if (window.confirm('Apakah Anda yakin ingin menghapus percakapan ini?')) {
       setMessages([initialMessage]);
+      setInput('');
+      setIsLoading(false);
     }
   };
 
@@ -84,21 +86,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
       }
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'model', content: "Maaf, terjadi kesalahan. Pastikan API Key Anda valid." }]);
+      setMessages(prev => [...prev, { role: 'model', content: "Maaf, Sahabat Quran sedang mengalami sedikit kendala. Coba cek koneksi Anda ya." }]);
     } finally {
       setIsLoading(false);
     }
   };
 
   const renderMessageContent = (content: string) => {
-    // 1. Clean up potential HTML leakage from the model
+    if (!content) return null;
     const cleaned = content.replace(/<[^>]*>?/gm, '');
-
-    // 2. Split by lines to handle block-level styling
     const lines = cleaned.split('\n');
     
     return lines.map((line, i) => {
-      // Handle Horizontal Rules (Dividers)
       if (line.trim() === '---') {
         return (
           <div key={i} className="ayah-divider">
@@ -109,7 +108,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         );
       }
 
-      // Handle Links
       const urlRegex = /(https?:\/\/quran\.com\/(id\/)?[^\s\)]+)/g;
       if (urlRegex.test(line)) {
         const urlMatch = line.match(urlRegex)?.[0];
@@ -129,7 +127,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         }
       }
 
-      // Detect Arabic Script
       const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
       if (arabicRegex.test(line)) {
         return (
@@ -139,7 +136,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         );
       }
 
-      // Default text lines (handle bold Markdown like **Terjemahan**)
       const processedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       if (line.trim() === '') return <div key={i} className="h-2"></div>;
       
@@ -156,14 +152,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center">
             <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
           </div>
           <div>
-            <h2 className="font-extrabold text-slate-900 tracking-tight text-lg">Asisten Quran</h2>
+            <h2 className="font-extrabold text-slate-900 tracking-tight text-lg">Sahabat Quran</h2>
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <p className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400">Verifikasi Aktif</p>
+              <p className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400">Siap Membantu</p>
             </div>
           </div>
         </div>
@@ -171,7 +167,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         <button 
           onClick={handleClear}
           className="text-slate-200 hover:text-red-400 transition-smooth p-2.5 hover:bg-red-50 rounded-2xl"
-          title="Reset"
+          title="Reset Percakapan"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -209,7 +205,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
                 <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
               </div>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Mengkaji Al-Quran...</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Mengkaji Ayat...</span>
             </div>
           </div>
         )}
@@ -221,7 +217,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Cari kata kunci atau tanya ayat..."
+            placeholder="Tanya apa saja seputar Al-Quran..."
             className="w-full bg-slate-50 border-2 border-slate-50 rounded-[2rem] py-5 px-10 pr-20 text-[16px] text-slate-900 placeholder-slate-400 font-semibold focus:outline-none focus:bg-white focus:border-emerald-500/20 transition-smooth shadow-inner"
           />
           <button

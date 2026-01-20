@@ -36,10 +36,10 @@ const App: React.FC = () => {
           <div className="mt-4 px-4 py-2.5 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-700/60 uppercase tracking-widest">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-              Semantic Search Active
+              Pencarian Semantik Aktif
             </div>
             <p className="text-[10px] text-gray-400 font-medium italic">
-              Didukung oleh Gemini 3 Pro & Quran.com API
+              Terintegrasi dengan Quran.com & Gemini AI
             </p>
           </div>
         </div>
