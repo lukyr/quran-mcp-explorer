@@ -57,11 +57,12 @@ export const geminiService = {
         
         PENTING: JANGAN PERNAH memberikan tag HTML.
         Format jawaban Anda harus bersih menggunakan Markdown standar:
-        1. Teks Arab: Tuliskan apa adanya (Uthmani).
-        2. Terjemahan: Gunakan format "**Terjemahan:** [Isi Terjemahan]"
-        3. Gunakan garis pemisah "---" di antara ayat yang berbeda.
-        4. Setiap ayat wajib memiliki link: https://quran.com/id/[surah]:[ayah]?translations=33
-        5. Gunakan Bahasa Indonesia sepenuhnya dengan nada yang hangat dan sopan.`,
+        1. Judul Ayat: Gunakan header "### Nama Surah (Nomor Surah): Nomor Ayat" di baris paling atas sebelum teks Arab.
+        2. Teks Arab: Tuliskan apa adanya (Uthmani).
+        3. Terjemahan: Gunakan format "**Terjemahan:** [Isi Terjemahan]"
+        4. Gunakan garis pemisah "---" di antara ayat yang berbeda.
+        5. Setiap ayat wajib memiliki link: https://quran.com/id/[surah]:[ayah]?translations=33
+        6. Gunakan Bahasa Indonesia sepenuhnya dengan nada yang hangat dan sopan.`,
         tools: [{ 
           functionDeclarations: [
             searchVerseTool, 

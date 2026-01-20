@@ -85,7 +85,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         ];
         
         const finalResponse = await geminiService.chat(
-          "Tolong berikan jawaban yang lengkap. Gunakan garis pemisah --- di antara ayat. Tulis teks Arab saja tanpa tag HTML.", 
+          "Tolong berikan jawaban yang lengkap. Gunakan garis pemisah --- di antara ayat. Sertakan judul referensi ayat menggunakan format ### Nama Surah (Nomor): Ayat.", 
           toolHistory
         );
         
@@ -123,6 +123,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
     const lines = cleaned.split('\n');
     
     return lines.map((line, i) => {
+      // 1. Divider
       if (line.trim() === '---') {
         return (
           <div key={i} className="ayah-divider my-4 lg:my-8 opacity-20">
@@ -133,6 +134,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         );
       }
 
+      // 2. Custom Header Handling (### Reference)
+      const headerMatch = line.match(/^###\s*(.*)/);
+      if (headerMatch) {
+        return (
+          <div key={i} className="my-4">
+            <span className="inline-flex items-center px-4 py-1.5 bg-emerald-600 text-white rounded-full text-[11px] lg:text-xs font-bold shadow-md shadow-emerald-200 tracking-wide uppercase">
+              {headerMatch[1]}
+            </span>
+          </div>
+        );
+      }
+
+      // 3. Quran.com Links
       const urlRegex = /(https?:\/\/quran\.com\/(id\/)?[^\s\)]+)/g;
       if (urlRegex.test(line)) {
         const urlMatch = line.match(urlRegex)?.[0];
@@ -145,22 +159,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
                 className="inline-flex items-center gap-1.5 px-3 py-1 lg:px-4 lg:py-1.5 bg-emerald-50 text-emerald-700 rounded-full hover:bg-emerald-600 hover:text-white transition-smooth border border-emerald-100 font-bold text-[10px] lg:text-xs shadow-sm"
               >
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z"/></svg>
-                Quran {label}
+                Detail di Quran.com ({label})
               </button>
             </div>
           );
         }
       }
 
+      // 4. Arabic Text
       const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
       if (arabicRegex.test(line)) {
         return (
-          <div key={i} className="font-arabic text-2xl lg:text-3xl text-slate-900 my-4 lg:my-6 tracking-wide drop-shadow-sm">
+          <div key={i} className="font-arabic text-2xl lg:text-3xl text-slate-900 my-4 lg:my-6 tracking-wide leading-[2.5] drop-shadow-sm">
             {line}
           </div>
         );
       }
 
+      // 5. Bold & Regular Text
       const processedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       if (line.trim() === '') return <div key={i} className="h-1 lg:h-2"></div>;
       
@@ -173,12 +189,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
 
   return (
     <div className="bg-white lg:rounded-[2.5rem] shadow-none lg:shadow-2xl flex flex-col flex-1 h-full min-h-0 lg:border border-slate-100 overflow-hidden">
-      {/* Header Chat - Lebih WhatsApp Style */}
-      <div className="bg-white px-4 lg:px-8 py-3 lg:py-5 border-b border-slate-50 flex items-center justify-between">
+      {/* Header Chat */}
+      <div className="bg-white px-4 lg:px-8 py-3 lg:py-5 border-b border-slate-50 flex items-center justify-between shadow-sm z-10">
         <div className="flex items-center gap-3 lg:gap-4">
-          <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl lg:rounded-2xl bg-emerald-50 flex items-center justify-center">
-            <svg className="w-4 h-4 lg:w-5 lg:h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl lg:rounded-2xl bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-100">
+            <svg className="w-4 h-4 lg:w-5 lg:h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" />
             </svg>
           </div>
           <div>
@@ -201,19 +217,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         </button>
       </div>
 
-      {/* Area Chat - Padding disesuaikan */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 lg:p-10 space-y-6 lg:space-y-10 custom-scrollbar bg-[#e5ddd5]/30 lg:bg-transparent">
+      {/* Area Chat */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 lg:p-10 space-y-6 lg:space-y-10 custom-scrollbar bg-[#fcfdfd]">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-            <div className={`max-w-[90%] lg:max-w-[92%] ${
+            <div className={`max-w-[90%] lg:max-w-[85%] ${
               m.role === 'user' 
                 ? 'bg-slate-900 text-white rounded-[1.5rem_1.5rem_0.25rem_1.5rem] lg:rounded-[2rem_2rem_0.5rem_2rem] px-5 py-3 lg:px-8 lg:py-5 shadow-lg shadow-slate-200' 
-                : 'w-full bg-white lg:bg-transparent rounded-2xl lg:rounded-none px-5 py-3 lg:px-0 lg:py-0 shadow-sm lg:shadow-none'
+                : 'w-full bg-white rounded-2xl lg:rounded-3xl px-5 py-4 lg:px-8 lg:py-6 shadow-sm border border-slate-100'
             }`}>
               {renderMessageContent(m.content)}
               
               {m.toolResults && m.toolResults.length > 0 && (
-                <div className="mt-4 lg:mt-8 pt-4 lg:pt-6 border-t border-slate-50 flex flex-wrap gap-1.5 lg:gap-2">
+                <div className="mt-4 lg:mt-6 pt-4 border-t border-slate-50 flex flex-wrap gap-1.5 lg:gap-2">
                   {m.toolResults.map((tr, idx) => (
                     <span key={idx} className="text-[8px] lg:text-[10px] font-bold text-slate-400 bg-slate-50 px-2 lg:px-3 py-1 lg:py-1.5 rounded-full border border-slate-100 uppercase tracking-wider">
                       {tr.name.replace('_', ' ')}
@@ -226,19 +242,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         ))}
         {isLoading && (
           <div className="flex justify-start animate-in fade-in duration-300">
-            <div className="bg-white lg:bg-slate-50 rounded-2xl lg:rounded-3xl px-4 py-3 lg:px-6 lg:py-4 border border-slate-100 flex items-center space-x-3 lg:space-x-4 shadow-sm lg:shadow-none">
+            <div className="bg-white rounded-2xl lg:rounded-3xl px-4 py-3 lg:px-6 lg:py-4 border border-slate-100 flex items-center space-x-3 lg:space-x-4 shadow-sm">
               <div className="flex space-x-1">
                 <div className="w-1.5 h-1.5 bg-emerald-300 rounded-full animate-bounce"></div>
                 <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
               </div>
-              <span className="text-[10px] lg:text-xs font-bold text-slate-400 uppercase tracking-widest">Mencari rujukan...</span>
+              <span className="text-[10px] lg:text-xs font-bold text-slate-400 uppercase tracking-widest">Mencari rujukan di Quran.com...</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Input Form - Sticky di bawah */}
+      {/* Input Form */}
       <form onSubmit={handleSubmit} className="p-4 lg:p-8 bg-white border-t border-slate-100">
         <div className="relative flex items-center max-w-4xl mx-auto gap-2 lg:gap-4">
           <input
