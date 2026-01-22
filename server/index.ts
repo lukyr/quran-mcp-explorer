@@ -149,8 +149,13 @@ STRICT GUIDELINES:
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Gemini Proxy Server running on port ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
-});
+// Export app for Vercel
+export default app;
+
+// Only listen if running locally (not in Vercel environment)
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Gemini Proxy Server running on port ${PORT}`);
+    console.log(`📍 Health check: http://localhost:${PORT}/health`);
+  });
+}
