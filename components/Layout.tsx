@@ -22,10 +22,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <span className="sr-only">Aplikasi Pencarian Ayat Al-Quran Terpercaya</span>
             </div>
           </div>
-          
+
           <nav className="flex items-center gap-4">
             <div className="flex items-center px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
-              <span className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">v1.0 Powered by AI</span>
+              <span className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">v{__APP_VERSION__} Powered by AI</span>
             </div>
           </nav>
         </div>
