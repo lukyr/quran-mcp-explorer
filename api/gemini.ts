@@ -4,8 +4,12 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { GoogleGenAI } from '@google/genai';
+import { GEMINI_CONFIG } from '../constants/index';
 
-const GEMINI_API_KEY = process.env.VITE_GEMINI_API_KEY;
+// Initialize Gemini AI
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '' });
+
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:3000',
@@ -43,6 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   // Handle preflight
   if (req.method === 'OPTIONS') {
@@ -52,12 +57,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  // Check API key
-  if (!GEMINI_API_KEY) {
-    console.error('VITE_GEMINI_API_KEY not configured');
-    return res.status(500).json({ error: 'Server configuration error' });
   }
 
   // Rate limiting
@@ -81,111 +80,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Message too long' });
     }
 
-    // Prepare request to Gemini API
+    // Prepare contents
     const contents = history && Array.isArray(history) && history.length > 0
       ? [...history, { role: 'user', parts: [{ text: message }] }]
       : [{ role: 'user', parts: [{ text: message }] }];
 
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents,
-          systemInstruction: {
-            parts: [{
-              text: `Anda adalah Sahabat Quran. Bantu pengguna mengeksplorasi Al-Quran dengan penuh kasih dan data yang akurat.
+    // Prepare tools from config
+    const tools = {
+      functionDeclarations: GEMINI_CONFIG.TOOLS.map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters as any
+      }))
+    };
 
-PENTING: JANGAN PERNAH memberikan tag HTML.
-Format jawaban Anda harus bersih menggunakan Markdown standar:
-1. Judul Ayat: Gunakan header "### Nama Surah (Nomor Surah): Nomor Ayat" di baris paling atas sebelum teks Arab.
-2. Teks Arab: Tuliskan apa adanya (Uthmani).
-3. Terjemahan: Gunakan format "**Terjemahan:** [Isi Terjemahan]"
-4. Gunakan garis pemisah "---" di antara ayat yang berbeda.
-
-PERATURAN LINK:
-Setiap ayat WAJIB memiliki link referensi di baris baru.
-FORMAT LINK: Tuliskan URL mentah saja tanpa tanda kurung atau format markdown [teks](url).
-CONTOH LINK: https://quran.com/id/1:1?translations=33
-
-Gunakan Bahasa Indonesia sepenuhnya dengan nada yang hangat dan sopan.`
-            }]
-          },
-          tools: [{
-            functionDeclarations: [
-              {
-                name: 'search_verse',
-                description: 'Search for Quranic verses based on keywords (e.g., "patience", "charity"). Supports pagination.',
-                parameters: {
-                  type: 'object',
-                  properties: {
-                    query: { type: 'string', description: 'The search query string.' },
-                    language: { type: 'string', description: 'Language of search (id or en). Default id.' },
-                    page: { type: 'number', description: 'Page number for search results (default 1). Use this if user asks for more results.' }
-                  },
-                  required: ['query']
-                }
-              },
-              {
-                name: 'get_ayah_details',
-                description: 'Retrieve specific details for a verse including Arabic text and translation.',
-                parameters: {
-                  type: 'object',
-                  properties: {
-                    surah_number: { type: 'number', description: 'Surah number (1-114).' },
-                    ayah_number: { type: 'number', description: 'Ayah number within the surah.' }
-                  },
-                  required: ['surah_number', 'ayah_number']
-                }
-              },
-              {
-                name: 'get_surah_info',
-                description: 'Get metadata about a Surah (revelation place, total verses, etc).',
-                parameters: {
-                  type: 'object',
-                  properties: {
-                    surah_number: { type: 'number', description: 'Surah number (1-114).' }
-                  },
-                  required: ['surah_number']
-                }
-              }
-            ]
-          }],
-        }),
+    // Call Gemini API using SDK
+    const response = await ai.models.generateContent({
+      model: GEMINI_CONFIG.MODEL_NAMES.FLASH,
+      contents,
+      config: {
+        systemInstruction: GEMINI_CONFIG.SYSTEM_INSTRUCTION,
+        tools: [tools]
       }
-    );
+    });
 
-    if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text();
-      console.error('Gemini API error:', errorText);
-      return res.status(geminiResponse.status).json({
-        error: 'AI service error',
-        details: geminiResponse.status === 429 ? 'Rate limit exceeded' : 'Service unavailable'
-      });
-    }
-
-    const data = await geminiResponse.json();
-
-    // Extract response
-    const candidate = data.candidates?.[0];
-    const text = candidate?.content?.parts?.[0]?.text || '';
-    const functionCalls = candidate?.content?.parts
-      ?.filter((part: any) => part.functionCall)
-      .map((part: any) => part.functionCall);
+    const text = response.text || '';
+    const toolCalls = response.functionCalls;
 
     return res.status(200).json({
       text,
-      toolCalls: functionCalls || undefined,
+      toolCalls: toolCalls || undefined,
     });
 
-  } catch (error) {
-    console.error('Proxy error:', error);
+  } catch (error: any) {
+    console.error('Gemini API error:', error);
     return res.status(500).json({
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: 'AI service error',
+      message: error.message
     });
   }
 }
