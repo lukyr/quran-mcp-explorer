@@ -335,8 +335,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
     <div className="bg-white lg:rounded-[2.5rem] shadow-none lg:shadow-2xl flex flex-col flex-1 h-full min-h-0 lg:border border-slate-100 overflow-hidden">
       <div className="bg-white px-4 lg:px-8 py-3 lg:py-5 border-b border-slate-50 flex items-center justify-between shadow-sm z-10">
         <div className="flex items-center gap-3 lg:gap-4">
-          <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-100">
-            <svg className="w-4 h-4 lg:w-5 lg:h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" /></svg>
+          <div className="w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center">
+            <img src="/logo.png" alt="Sahabat Quran Logo" className="w-full h-full object-contain" />
           </div>
           <div><h2 className="font-extrabold text-slate-900 tracking-tight text-sm lg:text-lg">Sahabat Quran</h2><div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><p className="text-[8px] lg:text-[10px] uppercase tracking-widest font-bold text-slate-400">Siap Membantu</p></div></div>
         </div>

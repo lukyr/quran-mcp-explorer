@@ -12,10 +12,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <header className="hidden lg:block bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50 transition-smooth">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-100" aria-hidden="true">
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" />
-              </svg>
+            <div className="w-10 h-10 flex items-center justify-center" aria-hidden="true">
+              <img src="/logo.png" alt="Sahabat Quran Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <p className="text-lg font-extrabold text-slate-900 tracking-tight leading-none">Sahabat Quran</p>
