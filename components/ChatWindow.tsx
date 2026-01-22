@@ -273,7 +273,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
                  })}
 
                  {/* Zoom Hint Icon */}
-                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 text-emerald-600 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm border border-emerald-100 flex items-center gap-1.5 pointer-events-none transform translate-y-1 group-hover:translate-y-0">
+                 <div className="absolute top-2 right-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-200 text-emerald-600 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm border border-emerald-100 flex items-center gap-1.5 pointer-events-none transform translate-y-0 lg:translate-y-1 lg:group-hover:translate-y-0">
                    <span className="text-[10px] font-bold uppercase tracking-wide">Perbesar</span>
                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
                  </div>
@@ -330,7 +330,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
                   </div>
 
                   {/* Zoom Hint */}
-                   <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-200 text-slate-400 bg-slate-50/90 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-2 pointer-events-none transform translate-y-1 group-hover:translate-y-0 border border-slate-100 shadow-sm">
+                   <div className="absolute top-4 right-4 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-200 text-slate-400 bg-slate-50/90 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-2 pointer-events-none transform translate-y-0 lg:translate-y-1 lg:group-hover:translate-y-0 border border-slate-100 shadow-sm">
                      <span className="text-[10px] font-bold uppercase tracking-wide">Perbesar</span>
                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
                    </div>
