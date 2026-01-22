@@ -176,7 +176,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
     };
 
     for (let i = 0; i < lines.length; i++) {
-       const line = lines[i].trim();
+       const line = lines[i]?.trim() || '';
        if (!line) {
          if (currentVerse) {
            // Empty line inside a verse might just be spacing?
