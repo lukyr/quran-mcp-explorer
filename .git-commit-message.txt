@@ -1,0 +1,93 @@
+feat: comprehensive security, reliability, and best practices improvements (v1.1.0)
+
+BREAKING CHANGES:
+- API keys must now be in .env.local (not committed to git)
+- Gemini service uses serverless proxy in production
+- Direct API calls only in development mode
+
+Security Fixes (CRITICAL):
+- 🔐 Protected API keys from client-side exposure
+- 🔐 Added .env files to .gitignore (.env.local, .env, .env*.local, .vercel)
+- 🔐 Created .env.example as safe template
+- 🔐 Implemented serverless API proxy (api/gemini.ts, api/gemini-image.ts)
+- 🔐 Added IP-based rate limiting (30 req/min chat, 10 req/hour images)
+- 🔐 Added CORS protection with allowed origins
+- 🔐 Added input validation and sanitization
+- 🔐 Enhanced security headers in vercel.json (X-Frame-Options, CSP, etc)
+
+Reliability Improvements:
+- 🛡️ Created centralized error handler (utils/errorHandler.ts)
+- 🛡️ Added error classification (NETWORK, API, VALIDATION, RATE_LIMIT, FORBIDDEN)
+- 🛡️ Created input validation utilities (utils/validation.ts)
+- 🛡️ Enhanced quranService with retry logic and exponential backoff
+- 🛡️ Added request timeout (10s) and max retries (3x)
+- 🛡️ Enhanced geminiService with auto-fallback to stable model
+- 🛡️ Better rate limit vs quota exceeded detection
+- 🛡️ Created ErrorBoundary component for graceful error handling
+- 🛡️ Wrapped app with ErrorBoundary in index.tsx
+
+Configuration Enhancements:
+- ⚙️ Enhanced TypeScript config (noUncheckedIndexedAccess, exactOptionalPropertyTypes)
+- ⚙️ Enhanced Vite config (code splitting, minification, env validation)
+- ⚙️ Created centralized constants file (constants/index.ts)
+- ⚙️ Added terser for production minification
+- ⚙️ Optimized bundle size (67.12 kB gzipped)
+
+Privacy Controls:
+- 🔒 Added analytics consent management
+- 🔒 Respect Do Not Track (DNT) header
+- 🔒 IP anonymization for Google Analytics
+- 🔒 LocalStorage-based consent tracking
+
+Backend Infrastructure (Optional):
+- 🏗️ Created Express.js backend (server/index.ts)
+- 🏗️ Can deploy to VM, Railway, Cloud Run, etc.
+- 🏗️ Same functionality as Vercel serverless
+- 🏗️ Rate limiting and CORS built-in
+
+Bug Fixes:
+- 🐛 Fixed TypeScript errors from stricter config (4 errors)
+- 🐛 Fixed analytics event type mismatch
+- 🐛 Added safe array access checks
+- 🐛 Fixed optional property type errors
+- 🐛 Better 403 forbidden error handling
+- 🐛 Disabled experimental image generation (not available for all API keys)
+
+Developer Experience:
+- 📦 Added concurrently for running frontend + backend
+- 📝 Created comprehensive DEV_SETUP.md
+- 📝 Created detailed CHANGELOG.md
+- 🔧 Added dev:server, dev:all, build:server, build:all scripts
+- 🔧 Auto-detection of development vs production mode
+- 🔧 Better error messages in Indonesian
+
+Files Changed:
+- Modified: .gitignore, package.json, tsconfig.json, vite.config.ts, vercel.json
+- Modified: index.tsx, types.ts, components/ChatWindow.tsx
+- Modified: services/geminiService.ts, services/quranService.ts, services/analyticsService.ts
+- Created: .env.example, DEV_SETUP.md, CHANGELOG.md
+- Created: api/gemini.ts, api/gemini-image.ts
+- Created: components/ErrorBoundary.tsx
+- Created: constants/index.ts
+- Created: utils/errorHandler.ts, utils/validation.ts
+- Created: server/index.ts, server/package.json, tsconfig.server.json
+- Created: vite-env.d.ts
+
+Dependencies Added:
+- concurrently@9.2.1 (dev) - Run multiple scripts
+- terser@5.46.0 (dev) - Code minification
+- @vercel/node@5.5.25 (dev) - Serverless functions
+
+Server Dependencies (new):
+- express@4.22.1, cors@2.8.5, express-rate-limit@7.5.1
+- @google/genai@1.38.0, tsx@4.21.0, typescript@5.6.3
+
+Migration Required:
+1. Revoke old API key at https://aistudio.google.com/apikey
+2. Generate new API key
+3. Create .env.local from .env.example
+4. Add VITE_GEMINI_API_KEY to .env.local
+5. Run: pnpm install
+6. Update Vercel environment variables
+
+See CHANGELOG.md for detailed migration guide and full list of changes.

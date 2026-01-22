@@ -3,8 +3,8 @@
  * Uses serverless proxy in production, direct API in development
  */
 
-import { GoogleGenAI, Type } from "@google/genai";
-import { API_CONFIG, ERROR_MESSAGES } from '../constants';
+import { GoogleGenAI } from "@google/genai";
+import { API_CONFIG, ERROR_MESSAGES, GEMINI_CONFIG } from '../constants';
 import { handleError, logError } from '../utils/errorHandler';
 import { quranService } from './quranService';
 
@@ -16,61 +16,24 @@ const useDirectAPI = isDevelopment && hasApiKey;
 // Initialize AI for development mode
 const ai = useDirectAPI ? new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || "" }) : null;
 
-// Tool definitions for direct API
-const searchVerseTool = {
-  name: 'search_verse',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Search for Quranic verses based on keywords (e.g., "patience", "charity"). Supports pagination.',
-    properties: {
-      query: { type: Type.STRING, description: 'The search query string.' },
-      language: { type: Type.STRING, description: 'Language of search (id or en). Default id.' },
-      page: { type: Type.NUMBER, description: 'Page number for search results (default 1). Use this if user asks for more results.' }
-    },
-    required: ['query'],
-  },
+// Map tools for direct API SDK using correct types
+const tools = {
+  functionDeclarations: GEMINI_CONFIG.TOOLS.map(tool => ({
+    name: tool.name,
+    description: tool.description,
+    parameters: {
+      type: tool.parameters.type as any,
+      properties: Object.entries(tool.parameters.properties).reduce((acc, [key, value]) => ({
+        ...acc,
+        [key]: {
+          ...value,
+          type: value.type as any
+        }
+      }), {}),
+      required: [...tool.parameters.required] as string[]
+    }
+  }))
 };
-
-const getAyahDetailsTool = {
-  name: 'get_ayah_details',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Retrieve specific details for a verse including Arabic text and translation.',
-    properties: {
-      surah_number: { type: Type.NUMBER, description: 'Surah number (1-114).' },
-      ayah_number: { type: Type.NUMBER, description: 'Ayah number within the surah.' }
-    },
-    required: ['surah_number', 'ayah_number'],
-  },
-};
-
-const getSurahInfoTool = {
-  name: 'get_surah_info',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Get metadata about a Surah (revelation place, total verses, etc).',
-    properties: {
-      surah_number: { type: Type.NUMBER, description: 'Surah number (1-114).' }
-    },
-    required: ['surah_number'],
-  },
-};
-
-const systemInstruction = `Anda adalah Sahabat Quran. Bantu pengguna mengeksplorasi Al-Quran dengan penuh kasih dan data yang akurat.
-
-PENTING: JANGAN PERNAH memberikan tag HTML.
-Format jawaban Anda harus bersih menggunakan Markdown standar:
-1. Judul Ayat: Gunakan header "### Nama Surah (Nomor Surah): Nomor Ayat" di baris paling atas sebelum teks Arab.
-2. Teks Arab: Tuliskan apa adanya (Uthmani).
-3. Terjemahan: Gunakan format "**Terjemahan:** [Isi Terjemahan]"
-4. Gunakan garis pemisah "---" di antara ayat yang berbeda.
-
-PERATURAN LINK:
-Setiap ayat WAJIB memiliki link referensi di baris baru.
-FORMAT LINK: Tuliskan URL mentah saja tanpa tanda kurung atau format markdown [teks](url).
-CONTOH LINK: https://quran.com/id/1:1?translations=33
-
-Gunakan Bahasa Indonesia sepenuhnya dengan nada yang hangat dan sopan.`;
 
 /**
  * Helper untuk melakukan retry jika terkena Rate Limit (429)
@@ -119,21 +82,15 @@ export const geminiService = {
           : [{ role: 'user', parts: [{ text: message }] }];
 
         // Try with flash model first, fallback to stable if needed
-        let model = 'gemini-2.0-flash-exp';
+        let model = GEMINI_CONFIG.MODEL_NAMES.FLASH;
 
         try {
           const response = await apiCallWithRetry(() => ai.models.generateContent({
             model,
             contents: contents,
             config: {
-              systemInstruction,
-              tools: [{
-                functionDeclarations: [
-                  searchVerseTool,
-                  getAyahDetailsTool,
-                  getSurahInfoTool
-                ]
-              }],
+              systemInstruction: GEMINI_CONFIG.SYSTEM_INSTRUCTION,
+              tools: [tools],
             },
           }));
 
@@ -145,20 +102,14 @@ export const geminiService = {
           // If 403, try with stable model
           if (error?.message?.includes('403') || error?.status === 403) {
             console.warn('⚠️ Flash model failed (403), trying stable model...');
-            model = 'gemini-1.5-flash';
+            model = GEMINI_CONFIG.MODEL_NAMES.STABLE as any;
 
             const response = await apiCallWithRetry(() => ai.models.generateContent({
               model,
               contents: contents,
               config: {
-                systemInstruction,
-                tools: [{
-                  functionDeclarations: [
-                    searchVerseTool,
-                    getAyahDetailsTool,
-                    getSurahInfoTool
-                  ]
-                }],
+                systemInstruction: GEMINI_CONFIG.SYSTEM_INSTRUCTION,
+                tools: [tools],
               },
             }));
 
@@ -211,12 +162,45 @@ export const geminiService = {
       if (useDirectAPI && ai) {
         console.log('🔧 Development mode: Using direct Gemini Image API');
 
-        // Note: Image generation might not be available in all regions/plans
-        // Return a placeholder or skip image generation
-        console.warn('⚠️ Image generation is experimental and may not work with all API keys');
+         const response = await apiCallWithRetry(() => ai.models.generateContent({
+            model: GEMINI_CONFIG.MODEL_NAMES.IMAGE,
+            contents: {
+              parts: [{
+                text: `Create a professional and serene wallpaper background with a theme of: ${theme}.
 
-        // For now, return a placeholder message
-        throw new Error('Image generation is currently unavailable. This feature requires special API access.');
+STRICT GUIDELINES:
+1. CONTENT: Must be strictly beautiful, peaceful, and inspiring.
+2. STYLE: High-quality minimalist digital art, cinematic lighting.
+3. COMPOSITION: NO text in the image. NO human faces.`
+              }]
+            },
+            config: {
+              // @ts-ignore
+              imageConfig: {
+                aspectRatio: "1:1"
+              }
+            }
+          }));
+
+          console.log('🖼️ Dev Image Gen Response:', response);
+          if (response.candidates && response.candidates.length > 0) {
+            const parts = response.candidates[0].content?.parts;
+            if (parts) {
+              for (const part of parts) {
+                if (part.inlineData?.data) {
+                  return `data:image/png;base64,${part.inlineData.data}`;
+                }
+              }
+
+              // Check for text refusal
+              const textPart = parts.find((p: any) => p.text)?.text;
+              if (textPart) {
+                  console.warn('⚠️ Model returned text instead of image:', textPart);
+                  throw new Error(`Model refused: ${textPart}`);
+              }
+            }
+          }
+          throw new Error('Gagal menghasilkan gambar. Respons kosong.');
       }
 
       // Use proxy endpoint in production
@@ -256,13 +240,13 @@ export const geminiService = {
   async executeTool(name: string, args: any): Promise<any> {
     try {
       switch (name) {
-        case 'search_verse':
+        case GEMINI_CONFIG.TOOL_NAMES.SEARCH_VERSE:
           const searchData = await quranService.searchVerses(args.query, args.language || 'id', args.page || 1);
           if (!searchData || searchData.length === 0) return { message: "Tidak ada ayat yang ditemukan." };
           return searchData;
-        case 'get_ayah_details':
+        case GEMINI_CONFIG.TOOL_NAMES.GET_AYAH_DETAILS:
           return await quranService.getAyahDetails(args.surah_number, args.ayah_number);
-        case 'get_surah_info':
+        case GEMINI_CONFIG.TOOL_NAMES.GET_SURAH_INFO:
           return await quranService.getSurah(args.surah_number);
         default:
           throw new Error(`Tool ${name} not found`);
