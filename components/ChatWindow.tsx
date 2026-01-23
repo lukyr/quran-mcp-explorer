@@ -2,6 +2,9 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { geminiService } from '../services/geminiService';
 import { analyticsService } from '../services/analyticsService';
+import { chatHistoryService } from '../services/chatHistoryService';
+import { HistoryModal } from './HistoryModal';
+import { supabase } from '../services/supabaseClient';
 import { ChatMessage } from '../types';
 
 interface ChatWindowProps {
@@ -18,16 +21,67 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastClearTimestamp = useRef<number>(Date.now());
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    // Listen for Auth changes (Login/Logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+         console.log('User signed in, merging history...');
+         await chatHistoryService.mergeAnonymousHistory(session.user.id);
+
+         // If we are currently in an anonymous conversation, update its ownership or reload
+         if (conversationId) {
+             const userId = session.user.id;
+             // The backend trigger/RLS or simple update might be needed if not covered by merge
+             // But mergeAnonymousHistory touches all conversations with local ID.
+             // We might just want to refresh the current conversation ID's ownership locally?
+             // Actually, mergeAnonymousHistory updates the DB.
+             // If the current UI state has conversationId, it's fine.
+         }
+      }
+
+      if (event === 'SIGNED_OUT') {
+         // Clear current conversation if it was user-bound?
+         // For now, maybe just keep it or reset
+         setMessages([initialMessage]);
+         setConversationId(null);
+         localStorage.removeItem('current_conversation_id');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [conversationId, initialMessage]);
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [messages, isLoading]);
+
+  // Load last conversation on mount
+  useEffect(() => {
+    const loadLastConversation = async () => {
+      const savedId = localStorage.getItem('current_conversation_id');
+      if (savedId) {
+        setConversationId(savedId);
+        const history = await chatHistoryService.getMessages(savedId);
+        if (history.length > 0) {
+          setMessages(history);
+        } else {
+          // If conversation exists but empty (unlikely) or deleted remotely
+          setMessages([initialMessage]);
+        }
+      }
+    };
+    loadLastConversation();
+  }, [initialMessage]);
 
   const handleClear = () => {
     analyticsService.logEvent('CLEAR_CHAT');
@@ -38,6 +92,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
     setMessages([initialMessage]);
     setInput('');
     setIsLoading(false);
+    setConversationId(null);
+    localStorage.removeItem('current_conversation_id');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,10 +109,27 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
     abortControllerRef.current = controller;
 
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    const newUserMessage: ChatMessage = { role: 'user', content: userMessage };
+    setMessages(prev => [...prev, newUserMessage]);
     setIsLoading(true);
 
     try {
+      // 1. Create conversation if not exists
+      let currentId = conversationId;
+      if (!currentId) {
+        const newConv = await chatHistoryService.createConversation(userMessage);
+        if (newConv) {
+          currentId = newConv.id;
+          setConversationId(currentId);
+          localStorage.setItem('current_conversation_id', currentId);
+        }
+      }
+
+      // 2. Save user message
+      if (currentId) {
+        await chatHistoryService.saveMessage(currentId, newUserMessage);
+      }
+
       const apiHistory = messages
         .filter((m, idx) => !(idx === 0 && m.role === 'model'))
         .map(m => ({
@@ -102,17 +175,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
         const toolsUsed = response.toolCalls.map(tc => tc.name);
         analyticsService.trackAISuccess(responseTime, toolsUsed);
 
-        setMessages(prev => [...prev, {
+        const newModelMessage: ChatMessage = {
           role: 'model',
           content: finalResponse.text || "Hasil telah diproses.",
           toolResults
-        }]);
+        };
+
+        setMessages(prev => [...prev, newModelMessage]);
+
+        if (currentId) {
+          await chatHistoryService.saveMessage(currentId, newModelMessage);
+        }
       } else {
         // Track success even without tools
         const responseTime = Date.now() - requestTime;
         analyticsService.trackAISuccess(responseTime, []);
 
-        setMessages(prev => [...prev, { role: 'model', content: response.text }]);
+        const newModelMessage: ChatMessage = { role: 'model', content: response.text };
+        setMessages(prev => [...prev, newModelMessage]);
+
+        if (currentId) {
+          await chatHistoryService.saveMessage(currentId, newModelMessage);
+        }
       }
     } catch (error: any) {
       if (requestTime < lastClearTimestamp.current) return;
@@ -143,6 +227,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
     analyticsService.trackViewSurah(url);
     analyticsService.trackExternalLink(url, 'Quran.com');
     onLinkClick(url);
+  };
+
+  // --- History Modal ---
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  const handleSelectConversation = async (id: string) => {
+    setConversationId(id);
+    localStorage.setItem('current_conversation_id', id);
+    setIsLoading(true);
+    try {
+      const history = await chatHistoryService.getMessages(id);
+      setMessages(history.length > 0 ? history : [initialMessage]);
+    } catch (e) {
+      console.error(e);
+      setMessages([initialMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // --- New Types & Parser ---
@@ -389,7 +491,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
           </div>
           <div><h2 className="font-extrabold text-slate-900 tracking-tight text-sm lg:text-lg">Sahabat Quran</h2><div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><p className="text-[8px] lg:text-[10px] uppercase tracking-widest font-bold text-slate-400">Siap Membantu</p></div></div>
         </div>
-        <button onClick={handleClear} className="text-slate-300 hover:text-red-500 transition-smooth p-2 hover:bg-red-50 rounded-xl group"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+        <div className="flex items-center gap-2">
+           <button onClick={() => setIsHistoryOpen(true)} className="text-slate-400 hover:text-emerald-600 transition-smooth p-2 hover:bg-emerald-50 rounded-xl group" title="Riwayat Percakapan">
+             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+           </button>
+           <button onClick={handleClear} className="text-slate-300 hover:text-red-500 transition-smooth p-2 hover:bg-red-50 rounded-xl group" title="Hapus Chat"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+        </div>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 lg:p-10 space-y-6 lg:space-y-10 custom-scrollbar bg-[#fcfdfd]">
@@ -459,6 +566,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
            </div>
         </div>
       )}
+
+      <HistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        onSelectConversation={handleSelectConversation}
+        currentConversationId={conversationId}
+      />
     </div>
   );
 };
