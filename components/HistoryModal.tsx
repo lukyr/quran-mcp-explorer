@@ -24,13 +24,29 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadConversations();
+      // Subscribe to auth changes to update state when session is restored
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        setUser(session?.user ?? null);
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          // Reload conversations if user just signed in/restored
+          loadConversations();
+        }
+      });
+
+      // Also check initial session
       checkUser();
+
+      return () => {
+        subscription.unsubscribe();
+      };
     }
   }, [isOpen]);
 
   const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
+    // User getSession instead of getUser for better performance/reliability on reload
+    // getUser validates with server, getSession trusts local storage token (sufficient for UI state)
+    const { data: { session } } = await supabase.auth.getSession();
+    setUser(session?.user ?? null);
   };
 
   const loadConversations = async () => {

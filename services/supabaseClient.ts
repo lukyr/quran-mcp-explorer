@@ -9,4 +9,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "");
+export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "", {
+  auth: {
+    persistSession: true, // Explicitly enable localStorage persistence
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});

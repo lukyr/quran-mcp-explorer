@@ -26,7 +26,7 @@ export const getUserId = async () => {
     // 1. Check if Supabase Auth user exists with a timeout
     // Create a promise that rejects after 2 seconds
     const timeoutPromise = new Promise<{ data: { session: null } }>((_, reject) =>
-        setTimeout(() => reject(new Error('Session fetch timeout')), 2000)
+        setTimeout(() => reject(new Error('Session fetch timeout')), 10000)
     );
 
     // Race the session fetch against the timeout
@@ -65,19 +65,34 @@ export const chatHistoryService = {
     const userId = await getUserId();
     console.log('[chatHistory] Fetching conversations for:', userId);
 
-    const { data, error } = await supabase
+    // Race the DB query against a timeout
+    const dbPromise = supabase
       .from('conversations')
       .select('*')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false });
 
-    console.log('[chatHistory] Fetch result:', { dataLength: data?.length, error });
+    const timeoutPromise = new Promise<{ data: any, error: any }>((_, reject) =>
+        setTimeout(() => reject(new Error('DB fetch timeout')), 15000)
+    );
 
-    if (error) {
-      console.error('Error fetching conversations:', error);
-      return [];
+    try {
+        const { data, error } = await Promise.race([
+            dbPromise,
+            timeoutPromise
+        ]) as any;
+
+        console.log('[chatHistory] Fetch result:', { dataLength: data?.length, error });
+
+        if (error) {
+          console.error('Error fetching conversations:', error);
+          return [];
+        }
+        return data || [];
+    } catch (err) {
+        console.error('[chatHistory] DB query timed out:', err);
+        return [];
     }
-    return data || [];
   },
 
   async createConversation(firstMessage: string): Promise<Conversation | null> {

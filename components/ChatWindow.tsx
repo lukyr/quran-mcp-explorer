@@ -34,15 +34,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
          console.log('User signed in, merging history...');
          await chatHistoryService.mergeAnonymousHistory(session.user.id);
 
-         // If we are currently in an anonymous conversation, update its ownership or reload
-         if (conversationId) {
-             const userId = session.user.id;
-             // The backend trigger/RLS or simple update might be needed if not covered by merge
-             // But mergeAnonymousHistory touches all conversations with local ID.
-             // We might just want to refresh the current conversation ID's ownership locally?
-             // Actually, mergeAnonymousHistory updates the DB.
-             // If the current UI state has conversationId, it's fine.
-         }
+          // If we are currently in an anonymous conversation, update its ownership or reload
+          // mergeAnonymousHistory touches all conversations with local ID.
       }
 
       if (event === 'SIGNED_OUT') {
