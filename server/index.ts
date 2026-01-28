@@ -5,9 +5,12 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import express from 'express';
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
 import { GoogleGenAI } from '@google/genai';
 import { GEMINI_CONFIG } from '../constants/index';
+import { rateLimiter, apiRateLimiter } from './middleware/rateLimiter';
+import { allowGoodBots } from './middleware/botDetection';
+import { securityHeaders } from './middleware/securityHeaders';
+import { requestLogger } from './middleware/requestLogger';
 
 // Load environment variables from parent directory
 const __filename = fileURLToPath(import.meta.url);
@@ -20,33 +23,46 @@ const PORT = process.env.PORT || 3001;
 // Initialize Gemini AI
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '' });
 
-// Middleware
-app.use(express.json());
+// Security Middleware (order matters!)
+app.use(requestLogger); // Log all requests first
+app.use(securityHeaders); // Add security headers
+app.use(allowGoodBots); // Block bad bots, allow good ones
+app.use(rateLimiter); // General rate limiting
+
+// CORS configuration
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
-  credentials: true
+  origin: (origin, callback) => {
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://sahabatquran.fun',
+      'https://www.sahabatquran.fun'
+    ];
+
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`🚫 CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Rate limiting
-const chatLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 30, // 30 requests per minute
-  message: { error: 'Too many requests. Please try again later.' }
-});
-
-const imageLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // 10 requests per hour
-  message: { error: 'Too many image generation requests. Please try again later.' }
-});
+app.use(express.json({ limit: '10mb' })); // Limit payload size
 
 // Health check
 app.get('/health', (_: express.Request, res: express.Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Chat endpoint
-app.post('/api/gemini', chatLimiter, async (req: express.Request, res: express.Response) => {
+// Chat endpoint with API rate limiting
+app.post('/api/gemini', apiRateLimiter, async (req: express.Request, res: express.Response) => {
   try {
     const { message, history } = req.body;
 
@@ -93,7 +109,7 @@ app.post('/api/gemini', chatLimiter, async (req: express.Request, res: express.R
 });
 
 // Image generation endpoint
-app.post('/api/gemini-image', imageLimiter, async (req: express.Request, res: express.Response) => {
+app.post('/api/gemini-image', apiRateLimiter, async (req: express.Request, res: express.Response) => {
   try {
     const { theme } = req.body;
 
@@ -105,50 +121,46 @@ app.post('/api/gemini-image', imageLimiter, async (req: express.Request, res: ex
       return res.status(400).json({ error: 'Theme description too long' });
     }
 
-    const response = await ai.models.generateContent({
-      model: GEMINI_CONFIG.MODEL_NAMES.IMAGE,
-      contents: {
-        parts: [{
-          text: `Create a professional and serene wallpaper background with a theme of: ${theme}.
+    // Use Imagen 4.0 API for image generation
+    const response = await ai.models.generateImages({
+      model: GEMINI_CONFIG.MODEL_NAMES.IMAGE, // imagen-4.0-generate-001
+      prompt: `Create a professional and serene wallpaper background with a theme of: ${theme}.
 
 STRICT GUIDELINES:
-1. CONTENT: Must be strictly beautiful, peaceful, and inspiring.
-2. STYLE: High-quality minimalist digital art, cinematic lighting.
-3. COMPOSITION: NO text in the image. NO human faces.`
-        }]
-      },
+1. CONTENT: Must be strictly beautiful, peaceful, and inspiring Islamic art.
+2. STYLE: High-quality minimalist digital art, cinematic lighting, soft gradients.
+3. COMPOSITION: NO text in the image. NO human faces. NO animals.
+4. MOOD: Peaceful, spiritual, contemplative.
+5. COLORS: Warm, calming colors that inspire reflection.`,
       config: {
-        // @ts-ignore - imageConfig not strictly typed in all SDK versions yet
-        imageConfig: {
-            aspectRatio: "1:1"
-        }
+        numberOfImages: 1,
+        includeRaiReason: true,
       }
     });
 
-    const candidates = response.candidates;
-    console.log('🖼️ Image Gen Response Candidates:', JSON.stringify(candidates, null, 2));
+    console.log('🖼️ Imagen Response:', response);
 
-    if (candidates && candidates.length > 0) {
-      const parts = candidates?.[0]?.content?.parts;
-      if (parts) {
-        for (const part of parts) {
-          if (part.inlineData?.data) {
-            return res.json({
-              image: `data:image/png;base64,${part.inlineData.data}`
-            });
-          }
-        }
-      }
-
-      // If we got here, we have candidates but no image. Check for text rejection.
-      const textPart = parts?.find(p => p.text)?.text;
-      if (textPart) {
-          console.warn('⚠️ Model returned text instead of image:', textPart);
-          return res.status(400).json({ error: `Model refused to generate image: ${textPart}` });
+    if (response?.generatedImages && response.generatedImages.length > 0) {
+      const imageBytes = response.generatedImages[0]?.image?.imageBytes;
+      if (imageBytes) {
+        return res.json({
+          image: `data:image/png;base64,${imageBytes}`
+        });
       }
     }
 
-    res.status(500).json({ error: 'Failed to generate image. No candidates returned.' });
+    // Check for RAI filtering
+    if (response?.generatedImages?.[0]?.raiFilteredReason) {
+      const reason = response.generatedImages[0].raiFilteredReason;
+      console.warn('⚠️ Image blocked by RAI filter:', reason);
+      return res.status(400).json({
+        error: 'Image generation blocked by content filter',
+        reason
+      });
+    }
+
+    // No image generated
+    res.status(500).json({ error: 'Failed to generate image. No image data returned.' });
   } catch (error: any) {
     console.error('Image generation error:', error);
     res.status(500).json({

@@ -160,49 +160,42 @@ export const geminiService = {
 
   async generateVerseImage(theme: string): Promise<string> {
     try {
-      // Use direct API in development mode
+      // Use Imagen 4.0 for image generation (gemini models don't support image generation)
       if (useDirectAPI && ai) {
-        console.log('🔧 Development mode: Using direct Gemini Image API');
+        console.log('🔧 Development mode: Using Imagen 4.0 API');
 
-         const response = await apiCallWithRetry(() => ai.models.generateContent({
-            model: GEMINI_CONFIG.MODEL_NAMES.IMAGE,
-            contents: {
-              parts: [{
-                text: `Create a professional and serene wallpaper background with a theme of: ${theme}.
+        const response = await apiCallWithRetry(() => ai.models.generateImages({
+          model: 'imagen-4.0-generate-001',
+          prompt: `Create a professional and serene wallpaper background with a theme of: ${theme}.
 
 STRICT GUIDELINES:
-1. CONTENT: Must be strictly beautiful, peaceful, and inspiring.
-2. STYLE: High-quality minimalist digital art, cinematic lighting.
-3. COMPOSITION: NO text in the image. NO human faces.`
-              }]
-            },
-            config: {
-              // @ts-ignore
-              imageConfig: {
-                aspectRatio: "1:1"
-              }
-            }
-          }));
-
-          console.log('🖼️ Dev Image Gen Response:', response);
-          if (response.candidates && response.candidates.length > 0) {
-            const parts = response.candidates[0].content?.parts;
-            if (parts) {
-              for (const part of parts) {
-                if (part.inlineData?.data) {
-                  return `data:image/png;base64,${part.inlineData.data}`;
-                }
-              }
-
-              // Check for text refusal
-              const textPart = parts.find((p: any) => p.text)?.text;
-              if (textPart) {
-                  console.warn('⚠️ Model returned text instead of image:', textPart);
-                  throw new Error(`Model refused: ${textPart}`);
-              }
-            }
+1. CONTENT: Must be strictly beautiful, peaceful, and inspiring Islamic art.
+2. STYLE: High-quality minimalist digital art, cinematic lighting, soft gradients.
+3. COMPOSITION: NO text in the image. NO human faces. NO animals.
+4. MOOD: Peaceful, spiritual, contemplative.
+5. COLORS: Warm, calming colors that inspire reflection.`,
+          config: {
+            numberOfImages: 1,
+            includeRaiReason: true,
           }
-          throw new Error('Gagal menghasilkan gambar. Respons kosong.');
+        }));
+
+        console.log('🖼️ Imagen Response:', response);
+
+        if (response?.generatedImages && response.generatedImages.length > 0) {
+          const imageBytes = response.generatedImages[0]?.image?.imageBytes;
+          if (imageBytes) {
+            return `data:image/png;base64,${imageBytes}`;
+          }
+        }
+
+        if (response?.generatedImages?.[0]?.raiFilteredReason) {
+          const reason = response.generatedImages[0].raiFilteredReason;
+          console.warn('⚠️ Image blocked by RAI filter:', reason);
+          throw new Error(`Gambar tidak dapat dibuat: ${reason}`);
+        }
+
+        throw new Error('Gagal menghasilkan gambar. Respons kosong.');
       }
 
       // Use proxy endpoint in production

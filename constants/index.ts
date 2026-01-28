@@ -151,7 +151,7 @@ export const GEMINI_CONFIG = {
   MODEL_NAMES: {
     FLASH: "gemini-2.5-flash",
     STABLE: "gemini-2.5-flash",
-    IMAGE: "gemini-2.5-flash",
+    IMAGE: "imagen-4.0-generate-001", // Imagen 4.0 for image generation
     LITE: "gemini-2.5-flash",
   },
   SYSTEM_INSTRUCTION: `Anda adalah Sahabat Quran. Bantu pengguna mengeksplorasi Al-Quran dengan penuh kasih dan data yang akurat.
